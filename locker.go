@@ -1,7 +1,6 @@
 package locker
 
 import (
-	"unsafe"
 	"crypto/sha1"
 	"errors"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"net"
 	"strconv"
 	"time"
+	"unsafe"
 
 	"github.com/garyburd/redigo/redis"
 )
@@ -119,6 +119,8 @@ type Locker struct {
 // NewRedisLocker 创建一个Redis锁
 // 在创建锁之前必须使用InitLockerInfo先进行初始化
 // 如果连接池未初始化,则无法创建Locker
+// name:锁名称
+// timeout:锁的超时时间(毫秒)
 func NewRedisLocker(name string, timeout int64) *Locker {
 	if pool == nil {
 		return nil
