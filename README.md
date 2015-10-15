@@ -20,3 +20,69 @@
 4.每个调用锁方法都需要调用的解锁方法  
 5.一般情况下使用Unlock进行解锁,只有满足特殊需求的时候才使用UnlockIfTimeout解锁  
 
+使用方法:  
+```go
+//初始化redis信息
+func init() {
+	InitLockerInfo("127.0.0.1:6379", 10)
+}
+
+//超时锁
+func LockWithTimeoutAndUnlock(ret chan int, id int, t *testing.T) {
+	t.Log(id, "启动")
+	var locker = NewRedisLocker("LockAndUnlock123456", 30000) //锁有效期30s
+	if locker != nil {
+		if locker.LockWithTimeout(2000) {
+			t.Log(id, "锁定并等待3秒超时")
+			fmt.Println(id, "锁定", time.Now().UnixNano())
+			time.Sleep(3 * time.Second)
+			fmt.Println(id, "解除锁定", time.Now().UnixNano())
+			locker.Unlock()
+		} else {
+			fmt.Println(id, "锁定失败", time.Now().UnixNano())
+			t.Log(id, "锁定失败")
+		}
+	}
+	ret <- id
+	t.Log(id, "结束")
+}
+
+//阻塞锁
+func LockAndUnlock(ret chan int, id int, t *testing.T) {
+	t.Log(id, "启动")
+	var locker = NewRedisLocker("LockAndUnlock12345", 30000) //锁有效期30s
+	if locker != nil {
+		if locker.Lock() {
+			t.Log(id, "锁定并等待3秒超时")
+			time.Sleep(3 * time.Second)
+			fmt.Println(id, "锁定", time.Now().UnixNano())
+			locker.Unlock()
+		} else {
+			fmt.Println(id, "锁定失败")
+			t.Log(id, "锁定失败")
+		}
+	}
+	ret <- id
+	t.Log(id, "结束")
+}
+
+//尝试锁
+func TryLockAndUnlock(ret chan int, id int, t *testing.T) {
+	t.Log(id, "启动")
+	var locker = NewRedisLocker("LockAndUnlock1234", 30000) //锁有效期30s
+	if locker != nil {
+		if locker.TryLock() {
+			t.Log(id, "锁定并等待3秒超时")
+			time.Sleep(3 * time.Second)
+			fmt.Println(id, "锁定", time.Now().UnixNano())
+			locker.Unlock()
+		} else {
+			fmt.Println(id, "锁定失败")
+			t.Log(id, "锁定失败")
+		}
+	}
+	ret <- id
+	t.Log(id, "结束")
+}
+
+```
