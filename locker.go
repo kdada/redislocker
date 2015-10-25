@@ -1,3 +1,6 @@
+// Package locker 实现了一个基于单redis服务器的互斥锁.
+// 当一次Lock失败之后,会随机在RetryMinTimeInterval和RetryMaxTimeInterval之间
+// 取一个随机值作为下次请求锁的时间间隔
 package locker
 
 import (
@@ -13,8 +16,6 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
-// 当一次Lock失败之后,会随机在RetryMinTimeInterval和RetryMaxTimeInterval之间
-// 取一个随机值作为下次请求锁的时间间隔
 // Lock请求锁的最小时间间隔(毫秒)
 var RetryMinTimeInterval int64 = 5
 
@@ -27,10 +28,10 @@ var pool *redis.Pool
 //服务器mac地址,用于作为服务器唯一标识
 var macAddr string
 
-// InitLockerInfo 初始化锁的链接信息,内部会维护一个redis连接池
-// 该初始化方法必须在NewRedisLocker之前执行一次
-// server:redis服务器地址
-// connIdle:最大空闲连接数,该值的设置与并发量有关
+// InitLockerInfo 初始化锁的链接信息,内部会维护一个redis连接池.
+// 该初始化方法必须在NewRedisLocker之前执行(程序运行期间执行一次即可).
+//  server:redis服务器地址
+//  connIdle:最大空闲连接数,该值的设置与并发量有关
 func InitLockerInfo(server string, connIdle int) {
 	var addrs, err = net.InterfaceAddrs()
 	if err != nil || len(addrs) <= 0 {
@@ -70,10 +71,10 @@ func init() {
 }
 
 // setRedisKV 设置指定的KV
-// key:键名
-// value:键值
-// timeout:键的存活时间(毫秒)
-// return:成功返回"OK",否则返回nil
+//  key:键名
+//  value:键值
+//  timeout:键的存活时间(毫秒)
+//  return:成功返回"OK",否则返回nil
 func setRedisKV(key, value string, timeout int64) (interface{}, error) {
 	if conn := pool.Get(); conn != nil {
 		defer conn.Close()
@@ -83,9 +84,9 @@ func setRedisKV(key, value string, timeout int64) (interface{}, error) {
 }
 
 // deleteRedisKV 删除指定的KV,只有KV完全一致的时候才删除
-// key:键名
-// value:键值
-// return:成功返回1,否则返回0,出错返回nil
+//  key:键名
+//  value:键值
+//  return:成功返回1,否则返回0,出错返回nil
 func deleteRedisKV(key, value string) (interface{}, error) {
 	if conn := pool.Get(); conn != nil {
 		defer conn.Close()
@@ -119,8 +120,8 @@ type Locker struct {
 // NewRedisLocker 创建一个Redis锁
 // 在创建锁之前必须使用InitLockerInfo先进行初始化
 // 如果连接池未初始化,则无法创建Locker
-// name:锁名称
-// timeout:锁的超时时间(毫秒)
+//  name:锁名称
+//  timeout:锁的超时时间(毫秒)
 func NewRedisLocker(name string, timeout int64) *Locker {
 	if pool == nil {
 		return nil
@@ -133,7 +134,7 @@ func NewRedisLocker(name string, timeout int64) *Locker {
 }
 
 // TryLock 尝试锁,只会进行一次尝试
-// return:true,成功取得锁,false,取得锁的过程中出现错误
+//  return:true,成功取得锁,false,取得锁的过程中出现错误
 func (this *Locker) TryLock() bool {
 	var result, err = setRedisKV(this.LockerName, this.LockerId, this.Timeout)
 	if err == nil && result == "OK" {
@@ -146,7 +147,7 @@ func (this *Locker) TryLock() bool {
 }
 
 // Lock 同步锁,将会一直等待,直到可以获得锁,每隔一段时间会进行一次尝试,不建议使用
-// return:true,成功取得锁,false,取得锁的过程中出现错误
+//  return:true,成功取得锁,false,取得锁的过程中出现错误
 func (this *Locker) Lock() bool {
 	for true {
 		var result, err = setRedisKV(this.LockerName, this.LockerId, this.Timeout)
@@ -163,8 +164,8 @@ func (this *Locker) Lock() bool {
 }
 
 // LockWithTimeout 超时锁,将会一直等待锁,直到获得锁或者超时
-// timeout:超时时间(毫秒)
-// return:true,成功取得锁,false,取得锁的过程中出现错误或者超时
+//  timeout:超时时间(毫秒)
+//  return:true,成功取得锁,false,取得锁的过程中出现错误或者超时
 func (this *Locker) LockWithTimeout(timeout int64) bool {
 	var deadline = time.Now().UnixNano() + timeout*int64(time.Millisecond)
 	var result interface{} = nil
