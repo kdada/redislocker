@@ -33,12 +33,12 @@ var macAddr string
 //  server:redis服务器地址
 //  connIdle:最大空闲连接数,该值的设置与并发量有关
 func InitLockerInfo(server string, connIdle int) {
-	var addrs, err = net.InterfaceAddrs()
-	if err != nil || len(addrs) <= 0 {
+	var addr, err = net.InterfaceByIndex(0)
+	if err != nil {
 		fmt.Println("[InitLockerInfo:29]", "获取服务器MAC地址失败", err.Error())
 		return
 	}
-	macAddr = addrs[0].String()
+	macAddr = addr.HardwareAddr.String()
 	pool = redis.NewPool(func() (redis.Conn, error) {
 		return redis.Dial("tcp", server)
 	}, connIdle)
