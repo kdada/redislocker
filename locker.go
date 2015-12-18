@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"net"
 	"strconv"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -33,15 +34,24 @@ var macAddr string
 //  server:redis服务器地址
 //  connIdle:最大空闲连接数,该值的设置与并发量有关
 func InitLockerInfo(server string, connIdle int) {
-	var addr, err = net.InterfaceByIndex(0)
+	var hws, err = net.Interfaces()
 	if err != nil {
-		fmt.Println("[InitLockerInfo:29]", "获取服务器MAC地址失败", err.Error())
+		fmt.Println("[InitLockerInfo]", "获取服务器MAC地址失败", err.Error())
 		return
 	}
-	macAddr = addr.HardwareAddr.String()
-	pool = redis.NewPool(func() (redis.Conn, error) {
-		return redis.Dial("tcp", server)
-	}, connIdle)
+	for _, h := range hws {
+		if !strings.HasPrefix(h.HardwareAddr.String(), "00:00:00:00:00:00") {
+			macAddr = h.HardwareAddr.String()
+			break
+		}
+	}
+	if macAddr != "" {
+		pool = redis.NewPool(func() (redis.Conn, error) {
+			return redis.Dial("tcp", server)
+		}, connIdle)
+	} else {
+		fmt.Println("[InitLockerInfo]", "未找到MAC硬件地址")
+	}
 }
 
 // generateLockerId 生成全局唯一id
