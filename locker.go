@@ -40,7 +40,8 @@ func InitLockerInfo(server string, connIdle int) {
 		return
 	}
 	for _, h := range hws {
-		if !strings.HasPrefix(h.HardwareAddr.String(), "00:00:00:00:00:00") {
+		var addr = h.HardwareAddr.String()
+		if addr != "" && !strings.HasPrefix(addr, "00:00:00:00:00:00") {
 			macAddr = h.HardwareAddr.String()
 			break
 		}
